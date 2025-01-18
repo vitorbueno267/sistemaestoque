@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Usuários</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="scripts.js" defer></script>
+</head>
+
+<body>
+    <h1>Cadastro de Cliente, Prestador e Produto</h1>
+
+    <!-- Formulário de Cadastro de Cliente -->
+    <h2>Cadastrar Cliente</h2>
+    <form id="formCadastroCliente">
+        <input type="text" id="nomeCliente" placeholder="Nome" required>
+        <input type="email" id="emailCliente" placeholder="Email" required>
+        <input type="password" id="senhaCliente" placeholder="Senha" required>
+        <button type="submit">Cadastrar</button>
+    </form>
+
+    <!-- Tabela de Clientes -->
+    <h3>Clientes</h3>
+    <table id="tabelaClientes">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Dados dos clientes serão inseridos aqui -->
+        </tbody>
+    </table>
+
+    <!-- Formulário de Cadastro de Prestador -->
+    <h2>Cadastrar Prestador</h2>
+    <form id="formCadastroPrestador">
+        <input type="text" id="nomePrestador" placeholder="Nome" required>
+        <input type="email" id="emailPrestador" placeholder="Email" required>
+        <input type="password" id="senhaPrestador" placeholder="Senha" required>
+        <button type="submit">Cadastrar</button>
+    </form>
+
+    <!-- Tabela de Prestadores -->
+    <h3>Prestadores</h3>
+    <table id="tabelaPrestadores">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Dados dos prestadores serão inseridos aqui -->
+        </tbody>
+    </table>
+
+    <!-- Formulário de Cadastro de Produto -->
+    <h2>Cadastrar Produto</h2>
+    <form id="formCadastroProduto">
+        <input type="text" id="nomeProduto" placeholder="Nome" required>
+        <input type="number" id="precoProduto" placeholder="Preço" required>
+        <input type="text" id="descricaoProduto" placeholder="Descrição" required>
+        <button type="submit">Cadastrar</button>
+    </form>
+
+    <!-- Tabela de Produtos -->
+    <h3>Produtos</h3>
+    <table id="tabelaProdutos">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Preço</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Dados dos produtos serão inseridos aqui -->
+        </tbody>
+    </table>
+
+    <!-- Modal de Edição de Cliente -->
+    <div id="modalEditarCliente" class="modal">
+        <div class="modal-content">
+            <h2>Editar Cliente</h2>
+            <input type="text" id="editarNomeCliente" placeholder="Nome">
+            <input type="email" id="editarEmailCliente" placeholder="Email">
+            <input type="password" id="editarSenhaCliente" placeholder="Senha">
+            <button id="btnSalvarEditarCliente">Salvar</button>
+            <button id="btnFecharModalCliente">Fechar</button>
+        </div>
+    </div>
+
+    <!-- Modal de Edição de Prestador -->
+    <div id="modalEditarPrestador" class="modal">
+        <div class="modal-content">
+            <h2>Editar Prestador</h2>
+            <input type="text" id="editarNomePrestador" placeholder="Nome">
+            <input type="email" id="editarEmailPrestador" placeholder="Email">
+            <input type="password" id="editarSenhaPrestador" placeholder="Senha">
+            <button id="btnSalvarEditarPrestador">Salvar</button>
+            <button id="btnFecharModalPrestador">Fechar</button>
+        </div>
+    </div>
+
+    <!-- Modal de Edição de Produto -->
+    <div id="modalEditarProduto" class="modal">
+        <div class="modal-content">
+            <h2>Editar Produto</h2>
+            <input type="text" id="editarNomeProduto" placeholder="Nome">
+            <input type="number" id="editarPrecoProduto" placeholder="Preço">
+            <input type="text" id="editarDescricaoProduto" placeholder="Descrição">
+            <button id="btnSalvarEditarProduto">Salvar</button>
+            <button id="btnFecharModalProduto">Fechar</button>
+        </div>
+    </div>
+
+    <script src="scripts.js"></script>
+</body>
+
+</html>
