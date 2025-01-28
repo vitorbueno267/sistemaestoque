@@ -1,97 +1,46 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const path = require('path');
 const db = require('./db');
 
 const app = express();
 const PORT = 3000;
 
-const path = require('path');
-
+// Configurações de middlewares
 app.use(express.static(path.join(__dirname, 'public')));
-
 app.use(bodyParser.json());
+app.use(express.json());
 
-// Rotas
+// Função utilitária para tratamento de erros
+const handleError = (err, res, message = 'Erro interno do servidor') => {
+    console.error(err);
+    res.status(500).send({ message });
+};
 
-// Cadastrar cliente
+// ----------------------------- ROTAS CLIENTE -----------------------------
+
+// Cadastro de cliente
 app.post('/cadastro-cliente', (req, res) => {
     const { nome, email, senha } = req.body;
-
-    // Verificar se o email já existe
     const verificaEmailSQL = 'SELECT * FROM cliente WHERE email = ?';
-    db.query(verificaEmailSQL, [email], (err, results) => {
-        if (err) return res.status(500).send(err);
 
+    db.query(verificaEmailSQL, [email], (err, results) => {
+        if (err) return handleError(err, res);
         if (results.length > 0) {
-            // Email já cadastrado
             return res.status(400).send({ message: 'Este email já está cadastrado!' });
         }
 
-        // Caso o email não exista, insere o novo cliente
         const sql = 'INSERT INTO cliente (nome, email, senha) VALUES (?, ?, ?)';
         db.query(sql, [nome, email, senha], (err, result) => {
-            if (err) return res.status(500).send(err);
+            if (err) return handleError(err, res);
             res.status(201).send({ message: 'Cliente criado!', id: result.insertId });
         });
     });
 });
 
-// Cadastrar prestador
-app.post('/cadastro-prestador', (req, res) => {
-    const { nome, email, senha } = req.body;
-
-    // Verificar se o email já existe
-    const verificaEmailSQL = 'SELECT * FROM prestador WHERE email = ?';
-    db.query(verificaEmailSQL, [email], (err, results) => {
-        if (err) return res.status(500).send(err);
-
-        if (results.length > 0) {
-            // Email já cadastrado
-            return res.status(400).send({ message: 'Este email já está cadastrado!' });
-        }
-
-        // Caso o email não exista, insere o novo prestador
-        const sql = 'INSERT INTO prestador (nome, email, senha) VALUES (?, ?, ?)';
-        db.query(sql, [nome, email, senha], (err, result) => {
-            if (err) return res.status(500).send(err);
-            res.status(201).send({ message: 'Prestador criado!', id: result.insertId });
-        });
-    });
-});
-
-// Cadastrar produto
-app.post('/cadastro-produto', (req, res) => {
-    const { id_cliente, id_prestador, descricao } = req.body;
-
-    // Verificar se o cliente e o prestador existem
-    const verificaClienteSQL = 'SELECT * FROM cliente WHERE id = ?';
-    db.query(verificaClienteSQL, [id_cliente], (err, clienteResult) => {
-        if (err) return res.status(500).send(err);
-        if (clienteResult.length === 0) {
-            return res.status(400).send({ message: 'Cliente não encontrado!' });
-        }
-
-        const verificaPrestadorSQL = 'SELECT * FROM prestador WHERE id = ?';
-        db.query(verificaPrestadorSQL, [id_prestador], (err, prestadorResult) => {
-            if (err) return res.status(500).send(err);
-            if (prestadorResult.length === 0) {
-                return res.status(400).send({ message: 'Prestador não encontrado!' });
-            }
-
-            // Inserir o novo produto
-            const sql = 'INSERT INTO produto (id_cliente, id_prestador, descricao) VALUES (?, ?, ?)';
-            db.query(sql, [id_cliente, id_prestador, descricao], (err, result) => {
-                if (err) return res.status(500).send(err);
-                res.status(201).send({ message: 'Produto cadastrado!', id: result.insertId });
-            });
-        });
-    });
-});
-
-// Buscar cliente
+// Buscar clientes
 app.get('/buscar-cliente', (req, res) => {
     const { nome, email } = req.query;
-
     let sql = 'SELECT * FROM cliente WHERE 1=1';
     const params = [];
 
@@ -105,15 +54,64 @@ app.get('/buscar-cliente', (req, res) => {
     }
 
     db.query(sql, params, (err, results) => {
-        if (err) return res.status(500).send(err);
+        if (err) return handleError(err, res);
         res.send(results);
     });
 });
 
-// Buscar prestador
+// Editar cliente
+app.put('/editar-cliente/:id', (req, res) => {
+    const { id } = req.params;
+    const { nome, email, senha } = req.body;
+
+    const sql = 'UPDATE cliente SET nome = ?, email = ?, senha = ? WHERE id = ?';
+    db.query(sql, [nome, email, senha, id], (err, result) => {
+        if (err) return handleError(err, res);
+        if (result.affectedRows === 0) {
+            return res.status(404).send({ message: 'Cliente não encontrado!' });
+        }
+        res.send({ message: 'Cliente atualizado com sucesso!' });
+    });
+});
+
+// Deletar cliente
+app.delete('/deletar-cliente/:id', (req, res) => {
+    const { id } = req.params;
+    const sql = 'DELETE FROM cliente WHERE id = ?';
+
+    db.query(sql, [id], (err, result) => {
+        if (err) return handleError(err, res);
+        if (result.affectedRows === 0) {
+            return res.status(404).send({ message: 'Cliente não encontrado!' });
+        }
+        res.send({ message: 'Cliente deletado!' });
+    });
+});
+
+// --------------------------- ROTAS PRESTADOR ----------------------------
+
+// Cadastro de prestador
+app.post('/cadastro-prestador', (req, res) => {
+    const { nome, email, senha } = req.body;
+    const verificaEmailSQL = 'SELECT * FROM prestador WHERE email = ?';
+
+    db.query(verificaEmailSQL, [email], (err, results) => {
+        if (err) return handleError(err, res);
+        if (results.length > 0) {
+            return res.status(400).send({ message: 'Este email já está cadastrado!' });
+        }
+
+        const sql = 'INSERT INTO prestador (nome, email, senha) VALUES (?, ?, ?)';
+        db.query(sql, [nome, email, senha], (err, result) => {
+            if (err) return handleError(err, res);
+            res.status(201).send({ message: 'Prestador criado com sucesso!', id: result.insertId });
+        });
+    });
+});
+
+// Buscar prestadores
 app.get('/buscar-prestador', (req, res) => {
     const { nome, email } = req.query;
-
     let sql = 'SELECT * FROM prestador WHERE 1=1';
     const params = [];
 
@@ -127,49 +125,8 @@ app.get('/buscar-prestador', (req, res) => {
     }
 
     db.query(sql, params, (err, results) => {
-        if (err) return res.status(500).send(err);
+        if (err) return handleError(err, res);
         res.send(results);
-    });
-});
-
-// Buscar produto
-app.get('/buscar-produto', (req, res) => {
-    const { id_cliente, id_prestador, descricao } = req.query;
-
-    let sql = 'SELECT * FROM produto WHERE 1=1';
-    const params = [];
-
-    if (id_cliente) {
-        sql += ' AND id_cliente = ?';
-        params.push(id_cliente);
-    }
-    if (id_prestador) {
-        sql += ' AND id_prestador = ?';
-        params.push(id_prestador);
-    }
-    if (descricao) {
-        sql += ' AND descricao LIKE ?';
-        params.push(`%${descricao}%`);
-    }
-
-    db.query(sql, params, (err, results) => {
-        if (err) return res.status(500).send(err);
-        res.send(results);
-    });
-});
-
-// Editar cliente
-app.put('/editar-cliente/:id', (req, res) => {
-    const { id } = req.params;
-    const { nome, email, senha } = req.body;
-
-    const sql = 'UPDATE cliente SET nome = ?, email = ?, senha = ? WHERE id = ?';
-    db.query(sql, [nome, email, senha, id], (err, result) => {
-        if (err) return res.status(500).send(err);
-        if (result.affectedRows === 0) {
-            return res.status(404).send({ message: 'Cliente não encontrado!' });
-        }
-        res.send({ message: 'Cliente atualizado!' });
     });
 });
 
@@ -180,22 +137,116 @@ app.put('/editar-prestador/:id', (req, res) => {
 
     const sql = 'UPDATE prestador SET nome = ?, email = ?, senha = ? WHERE id = ?';
     db.query(sql, [nome, email, senha, id], (err, result) => {
-        if (err) return res.status(500).send(err);
+        if (err) return handleError(err, res);
         if (result.affectedRows === 0) {
             return res.status(404).send({ message: 'Prestador não encontrado!' });
         }
-        res.send({ message: 'Prestador atualizado!' });
+        res.send({ message: 'Prestador atualizado com sucesso!' });
+    });
+});
+
+// Deletar prestador
+app.delete('/deletar-prestador/:id', (req, res) => {
+    const { id } = req.params;
+    const sql = 'DELETE FROM prestador WHERE id = ?';
+
+    db.query(sql, [id], (err, result) => {
+        if (err) return handleError(err, res);
+        if (result.affectedRows === 0) {
+            return res.status(404).send({ message: 'Prestador não encontrado!' });
+        }
+        res.send({ message: 'Prestador deletado com sucesso!' });
+    });
+});
+
+// --------------------------- ROTAS PRODUTO -----------------------------
+
+// Cadastro de produto
+app.post('/cadastro-produto', (req, res) => {
+    const { nome, preco, descricao, prestador_id, cliente_id } = req.body;
+
+    // Verifica se o cliente existe
+    const verificaClienteSQL = 'SELECT * FROM cliente WHERE id = ?';
+    db.query(verificaClienteSQL, [cliente_id], (err, clienteResult) => {
+        if (err) {
+            console.log('Erro ao verificar cliente:', err);
+            return res.status(500).json({ message: 'Erro interno ao verificar cliente.' });
+        }
+
+        if (clienteResult.length === 0) {
+            console.log('Cliente não encontrado! ID:', cliente_id);
+            return res.status(400).json({ message: 'Cliente não encontrado!' });
+        }
+
+        // Verifica se o prestador existe
+        const verificaPrestadorSQL = 'SELECT * FROM prestador WHERE id = ?';
+        db.query(verificaPrestadorSQL, [prestador_id], (err, prestadorResult) => {
+            if (err) {
+                console.log('Erro ao verificar prestador:', err);
+                return res.status(500).json({ message: 'Erro interno ao verificar prestador.' });
+            }
+
+            if (prestadorResult.length === 0) {
+                console.log('Prestador não encontrado! ID:', prestador_id);
+                return res.status(400).json({ message: 'Prestador não encontrado!' });
+            }
+
+            // Insere o produto
+            const sql = 'INSERT INTO produto (nome, preco, descricao, prestador_id, cliente_id) VALUES (?, ?, ?, ?, ?)';
+            db.query(sql, [nome, preco, descricao, prestador_id, cliente_id], (err, result) => {
+                if (err) {
+                    console.log('Erro ao cadastrar produto:', err);
+                    return res.status(500).json({ message: 'Erro interno ao cadastrar produto.' });
+                }
+
+                console.log('Produto cadastrado com sucesso! ID:', result.insertId);
+                return res.status(201).json({ message: 'Produto cadastrado!', id: result.insertId });
+            });
+        });
+    });
+});
+
+// Buscar produtos
+app.get('/buscar-produto', (req, res) => {
+    const { nome, preco, descricao, cliente_id, prestador_id } = req.query;
+    let sql = 'SELECT * FROM produto WHERE 1=1';
+    const params = [];
+
+    if (nome) {
+        sql += ' AND nome LIKE ?';
+        params.push(`%${nome}%`);
+    }
+    if (preco) {
+        sql += ' AND preco = ?';
+        params.push(preco);
+    }
+    if (descricao) {
+        sql += ' AND descricao LIKE ?';
+        params.push(`%${descricao}%`);
+    }
+    if (cliente_id) {
+        sql += ' AND cliente_id = ?';
+        params.push(cliente_id);
+    }
+    if (prestador_id) {
+        sql += ' AND prestador_id = ?';
+        params.push(prestador_id);
+    }
+
+    db.query(sql, params, (err, results) => {
+        if (err) return handleError(err, res);
+        res.send(results);
     });
 });
 
 // Editar produto
 app.put('/editar-produto/:id', (req, res) => {
     const { id } = req.params;
-    const { id_cliente, id_prestador, descricao } = req.body;
+    const { nome, preco, descricao } = req.body;
 
-    const sql = 'UPDATE produto SET id_cliente = ?, id_prestador = ?, descricao = ? WHERE id = ?';
-    db.query(sql, [id_cliente, id_prestador, descricao, id], (err, result) => {
-        if (err) return res.status(500).send(err);
+    const sql = 'UPDATE produto SET nome = ?, preco = ?, descricao = ? WHERE id = ?';
+    db.query(sql, [nome, preco, descricao, id], (err, result) => {
+        if (err) return handleError(err, res);
         if (result.affectedRows === 0) {
             return res.status(404).send({ message: 'Produto não encontrado!' });
         }
@@ -203,41 +254,13 @@ app.put('/editar-produto/:id', (req, res) => {
     });
 });
 
-// Deletar cliente
-app.delete('/deletar-cliente/:id', (req, res) => {
-    const { id } = req.params;
-
-    const sql = 'DELETE FROM cliente WHERE id = ?';
-    db.query(sql, [id], (err, result) => {
-        if (err) return res.status(500).send(err);
-        if (result.affectedRows === 0) {
-            return res.status(404).send({ message: 'Cliente não encontrado!' });
-        }
-        res.send({ message: 'Cliente deletado!' });
-    });
-});
-
-// Deletar prestador
-app.delete('/deletar-prestador/:id', (req, res) => {
-    const { id } = req.params;
-
-    const sql = 'DELETE FROM prestador WHERE id = ?';
-    db.query(sql, [id], (err, result) => {
-        if (err) return res.status(500).send(err);
-        if (result.affectedRows === 0) {
-            return res.status(404).send({ message: 'Prestador não encontrado!' });
-        }
-        res.send({ message: 'Prestador deletado!' });
-    });
-});
-
 // Deletar produto
 app.delete('/deletar-produto/:id', (req, res) => {
     const { id } = req.params;
-
     const sql = 'DELETE FROM produto WHERE id = ?';
+
     db.query(sql, [id], (err, result) => {
-        if (err) return res.status(500).send(err);
+        if (err) return handleError(err, res);
         if (result.affectedRows === 0) {
             return res.status(404).send({ message: 'Produto não encontrado!' });
         }
@@ -249,4 +272,3 @@ app.delete('/deletar-produto/:id', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Servidor rodando em http://localhost:${PORT}`);
 });
-

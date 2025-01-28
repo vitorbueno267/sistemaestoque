@@ -1,6 +1,27 @@
+// ** Constantes e Configurações Iniciais **
 const apiBaseUrl = 'http://localhost:3000';
 
-// Função para Cadastrar Cliente
+// Carregar dados automaticamente ao carregar a página
+document.addEventListener('DOMContentLoaded', () => {
+    carregarClientes();
+    carregarPrestadores();
+    carregarProdutos();
+});
+
+// ** Funções Genéricas **
+// Função para exibir alertas e logar erros
+function handleResponse(response, successMessage) {
+    if (response.ok) {
+        alert(successMessage);
+    } else {
+        console.error('Erro na resposta:', response);
+        alert('Ocorreu um erro. Consulte o console para mais detalhes.');
+    }
+}
+
+// ** Funções de Cliente **
+
+// Cadastrar Cliente
 document.getElementById('formCadastroCliente').addEventListener('submit', async (e) => {
     e.preventDefault();
     const nome = document.getElementById('nomeCliente').value;
@@ -23,24 +44,22 @@ document.getElementById('formCadastroCliente').addEventListener('submit', async 
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ nome, email, senha }),
         });
-        const data = await resCadastro.json();
-        alert(data.message);
+        handleResponse(resCadastro, 'Cliente cadastrado com sucesso!');
         document.getElementById('formCadastroCliente').reset();
         carregarClientes();
-
     } catch (error) {
         console.error('Erro ao cadastrar cliente:', error);
     }
 });
 
-// Função para Carregar Clientes
+// Carregar Clientes
 async function carregarClientes() {
     try {
         const res = await fetch(`${apiBaseUrl}/buscar-cliente`);
         const clientes = await res.json();
 
         const tabela = document.getElementById('tabelaClientes');
-        tabela.innerHTML = '';
+        tabela.innerHTML = ''; // Limpa a tabela antes de adicionar novas linhas
 
         clientes.forEach((cliente) => {
             const row = document.createElement('tr');
@@ -49,90 +68,86 @@ async function carregarClientes() {
                 <td>${cliente.nome}</td>
                 <td>${cliente.email}</td>
                 <td>
-                    <button class="edit" onclick="editarCliente(${cliente.id})">Editar</button>
+                    <button class="edit" data-id="${cliente.id}" data-nome="${cliente.nome}" data-email="${cliente.email}">Editar</button>
                     <button class="delete" onclick="deletarCliente(${cliente.id})">Excluir</button>
                 </td>
             `;
             tabela.appendChild(row);
         });
+
+        // Adiciona eventos aos botões de editar
+        adicionarEventosEditar();
     } catch (error) {
         console.error('Erro ao carregar clientes:', error);
     }
 }
 
-// Função para Editar Cliente
-async function editarCliente(id) {
-    const cliente = await buscarClientePorId(id);
-    abrirModalEditarCliente(cliente);
+// Adicionar eventos aos botões de editar
+function adicionarEventosEditar() {
+    const botoesEditar = document.querySelectorAll('.edit');
+    botoesEditar.forEach((botao) => {
+        botao.addEventListener('click', () => {
+            const id = botao.dataset.id;
+            const nome = botao.dataset.nome;
+            const email = botao.dataset.email;
+            abrirModalEditarCliente({ id, nome, email });
+        });
+    });
 }
 
-// Função para Buscar Cliente por ID
-async function buscarClientePorId(id) {
-    try {
-        const res = await fetch(`${apiBaseUrl}/buscar-cliente?id=${id}`);
-        const clientes = await res.json();
-        return clientes[0];
-    } catch (error) {
-        console.error('Erro ao buscar cliente:', error);
-    }
-}
-
-// Função para Abrir Modal de Edição de Cliente
+// Abrir o modal de edição de cliente
 function abrirModalEditarCliente(cliente) {
     const modal = document.getElementById('modalEditarCliente');
     const nomeInput = document.getElementById('editarNomeCliente');
     const emailInput = document.getElementById('editarEmailCliente');
     const senhaInput = document.getElementById('editarSenhaCliente');
-    
-    // Preenche os campos com os valores do cliente
+
     nomeInput.value = cliente.nome;
     emailInput.value = cliente.email;
-    senhaInput.value = cliente.senha;
+    senhaInput.value = ''; // Não exibe a senha
 
-    // Exibe o modal
     modal.style.display = 'flex';
 
-    // Ao clicar em "Salvar", envia os dados para atualização
+    // Atualizar cliente ao clicar no botão "Salvar"
     document.getElementById('btnSalvarEditarCliente').onclick = async () => {
-        const novoNome = nomeInput.value;
-        const novoEmail = emailInput.value;
-        const novaSenha = senhaInput.value;
-
-        // Envia os dados modificados para o back-end
         try {
             const res = await fetch(`${apiBaseUrl}/editar-cliente/${cliente.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    nome: novoNome || cliente.nome,
-                    email: novoEmail || cliente.email,
-                    senha: novaSenha || cliente.senha,
+                    nome: nomeInput.value,
+                    email: emailInput.value,
+                    senha: senhaInput.value,
                 }),
             });
-            const data = await res.json();
-            alert(data.message);
-            carregarClientes(); 
-            modal.style.display = 'none'; 
+
+            if (res.ok) {
+                alert('Cliente atualizado com sucesso!');
+                carregarClientes();
+                modal.style.display = 'none';
+            } else {
+                const error = await res.json();
+                alert(`Erro ao atualizar cliente: ${error.message}`);
+            }
         } catch (error) {
             console.error('Erro ao atualizar cliente:', error);
         }
     };
 
-    // Ao clicar em "Fechar", fecha o modal
+    // Fechar o modal
     document.getElementById('btnFecharModalCliente').onclick = () => {
         modal.style.display = 'none';
     };
 }
 
-// Função para Deletar Cliente
+// Deletar Cliente
 async function deletarCliente(id) {
     if (confirm('Tem certeza que deseja excluir este cliente?')) {
         try {
             const res = await fetch(`${apiBaseUrl}/deletar-cliente/${id}`, {
                 method: 'DELETE',
             });
-            const data = await res.json();
-            alert(data.message);
+            handleResponse(res, 'Cliente excluído com sucesso!');
             carregarClientes();
         } catch (error) {
             console.error('Erro ao excluir cliente:', error);
@@ -140,16 +155,9 @@ async function deletarCliente(id) {
     }
 }
 
-// Função para Buscar Clientes
-document.getElementById('formBuscaCliente').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const nomeBusca = document.getElementById('nomeBuscaCliente').value;
-    const emailBusca = document.getElementById('emailBuscaCliente').value;
+// ** Funções de Prestador **
 
-    carregarClientes(nomeBusca, emailBusca);
-});
-
-// Função para Cadastrar Prestador
+// Cadastrar Prestador
 document.getElementById('formCadastroPrestador').addEventListener('submit', async (e) => {
     e.preventDefault();
     const nome = document.getElementById('nomePrestador').value;
@@ -182,7 +190,7 @@ document.getElementById('formCadastroPrestador').addEventListener('submit', asyn
     }
 });
 
-// Função para Carregar Prestadores
+// Carregar Prestadores
 async function carregarPrestadores() {
     try {
         const res = await fetch(`${apiBaseUrl}/buscar-prestador`);
@@ -198,82 +206,79 @@ async function carregarPrestadores() {
                 <td>${prestador.nome}</td>
                 <td>${prestador.email}</td>
                 <td>
-                    <button class="edit" onclick="editarPrestador(${prestador.id})">Editar</button>
+                    <button class="edit" data-id="${prestador.id}" data-nome="${prestador.nome}" data-email="${prestador.email}">Editar</button>
                     <button class="delete" onclick="deletarPrestador(${prestador.id})">Excluir</button>
                 </td>
             `;
             tabela.appendChild(row);
         });
+
+        // Adiciona eventos aos botões de editar
+        adicionarEventosEditarPrestador();
     } catch (error) {
         console.error('Erro ao carregar prestadores:', error);
     }
 }
 
-// Função para Editar Prestador
-async function editarPrestador(id) {
-    const prestador = await buscarPrestadorPorId(id);
-    abrirModalEditarPrestador(prestador);
+// Adicionar eventos aos botões de editar Prestadores
+function adicionarEventosEditarPrestador() {
+    const botoesEditar = document.querySelectorAll('.edit');
+    botoesEditar.forEach((botao) => {
+        botao.addEventListener('click', () => {
+            const id = botao.dataset.id;
+            const nome = botao.dataset.nome;
+            const email = botao.dataset.email;
+            abrirModalEditarPrestador({ id, nome, email });
+        });
+    });
 }
 
-// Função para Buscar Prestador por ID
-async function buscarPrestadorPorId(id) {
-    try {
-        const res = await fetch(`${apiBaseUrl}/buscar-prestador?id=${id}`);
-        const prestadores = await res.json();
-        return prestadores[0];
-    } catch (error) {
-        console.error('Erro ao buscar prestador:', error);
-    }
-}
-
-// Função para Abrir Modal de Edição de Prestador
+// Abrir modal de edição de prestador
 function abrirModalEditarPrestador(prestador) {
     const modal = document.getElementById('modalEditarPrestador');
     const nomeInput = document.getElementById('editarNomePrestador');
     const emailInput = document.getElementById('editarEmailPrestador');
     const senhaInput = document.getElementById('editarSenhaPrestador');
-    
-    // Preenche os campos com os valores do prestador
+
     nomeInput.value = prestador.nome;
     emailInput.value = prestador.email;
-    senhaInput.value = prestador.senha;
+    senhaInput.value = ''; // Não exibe a senha
 
-    // Exibe o modal
     modal.style.display = 'flex';
 
-    // Ao clicar em "Salvar", envia os dados para atualização
+    // Atualizar prestador ao clicar no botão "Salvar"
     document.getElementById('btnSalvarEditarPrestador').onclick = async () => {
-        const novoNome = nomeInput.value;
-        const novoEmail = emailInput.value;
-        const novaSenha = senhaInput.value;
-
-        // Envia os dados modificados para o back-end
         try {
             const res = await fetch(`${apiBaseUrl}/editar-prestador/${prestador.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    nome: novoNome || prestador.nome,
-                    email: novoEmail || prestador.email,
-                    senha: novaSenha || prestador.senha,
+                    nome: nomeInput.value,
+                    email: emailInput.value,
+                    senha: senhaInput.value,
                 }),
             });
-            const data = await res.json();
-            alert(data.message);
-            carregarPrestadores();
-            modal.style.display = 'none'; 
+
+            if (res.ok) {
+                alert('Prestador atualizado com sucesso!');
+                carregarPrestadores();
+                modal.style.display = 'none';
+            } else {
+                const error = await res.json();
+                alert(`Erro ao atualizar prestador: ${error.message}`);
+            }
         } catch (error) {
             console.error('Erro ao atualizar prestador:', error);
         }
     };
 
-    // Ao clicar em "Fechar", fecha o modal
+    // Fechar o modal
     document.getElementById('btnFecharModalPrestador').onclick = () => {
         modal.style.display = 'none';
     };
 }
 
-// Função para Deletar Prestador
+// Deletar Prestador
 async function deletarPrestador(id) {
     if (confirm('Tem certeza que deseja excluir este prestador?')) {
         try {
@@ -289,29 +294,30 @@ async function deletarPrestador(id) {
     }
 }
 
-// Função para Cadastrar Produto
+// ** Funções de Produto **
+
+// Cadastrar Produto
 document.getElementById('formCadastroProduto').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const nome = document.getElementById('nomeProduto').value;
-    const preco = document.getElementById('precoProduto').value;
-    const descricao = document.getElementById('descricaoProduto').value;
+
+    const nome = document.getElementById('nomeProduto').value.trim();
+    const preco = document.getElementById('precoProduto').value.trim();
+    const descricao = document.getElementById('descricaoProduto').value.trim();
+    const idCliente = document.getElementById('clienteProduto').value;
+    const idPrestador = document.getElementById('prestadorProduto').value;
+
+    if (nome === '' || preco === '' || descricao === '' || idCliente === '' || idPrestador === '') {
+        alert('Por favor, preencha todos os campos.');
+        return;
+    }
 
     try {
-        // Verifica se o nome do produto já está cadastrado
-        const resBuscaNome = await fetch(`${apiBaseUrl}/buscar-produto?nome=${nome}`);
-        const produtosComNome = await resBuscaNome.json();
-
-        if (produtosComNome.length > 0) {
-            alert('Este produto já está cadastrado!');
-            return;
-        }
-
-        // Realiza o cadastro
         const resCadastro = await fetch(`${apiBaseUrl}/cadastro-produto`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nome, preco, descricao }),
+            body: JSON.stringify({ nome, preco, descricao, idCliente, idPrestador }),
         });
+
         const data = await resCadastro.json();
         alert(data.message);
         document.getElementById('formCadastroProduto').reset();
@@ -322,7 +328,7 @@ document.getElementById('formCadastroProduto').addEventListener('submit', async 
     }
 });
 
-// Função para Carregar Produtos
+// Carregar Produtos
 async function carregarProdutos() {
     try {
         const res = await fetch(`${apiBaseUrl}/buscar-produto`);
@@ -337,83 +343,82 @@ async function carregarProdutos() {
                 <td>${produto.id}</td>
                 <td>${produto.nome}</td>
                 <td>${produto.preco}</td>
+                <td>${produto.descricao}</td>
                 <td>
-                    <button class="edit" onclick="editarProduto(${produto.id})">Editar</button>
+                    <button class="edit" data-id="${produto.id}" data-nome="${produto.nome}" data-preco="${produto.preco}" data-descricao="${produto.descricao}">Editar</button>
                     <button class="delete" onclick="deletarProduto(${produto.id})">Excluir</button>
                 </td>
             `;
             tabela.appendChild(row);
         });
+
+        // Adiciona eventos aos botões de editar
+        adicionarEventosEditarProduto();
     } catch (error) {
         console.error('Erro ao carregar produtos:', error);
     }
 }
 
-// Função para Editar Produto
-async function editarProduto(id) {
-    const produto = await buscarProdutoPorId(id);
-    abrirModalEditarProduto(produto);
+// Adicionar eventos aos botões de editar Produto
+function adicionarEventosEditarProduto() {
+    const botoesEditar = document.querySelectorAll('.edit');
+    botoesEditar.forEach((botao) => {
+        botao.addEventListener('click', () => {
+            const id = botao.dataset.id;
+            const nome = botao.dataset.nome;
+            const preco = botao.dataset.preco;
+            const descricao = botao.dataset.descricao;
+            abrirModalEditarProduto({ id, nome, preco, descricao });
+        });
+    });
 }
 
-// Função para Buscar Produto por ID
-async function buscarProdutoPorId(id) {
-    try {
-        const res = await fetch(`${apiBaseUrl}/buscar-produto?id=${id}`);
-        const produtos = await res.json();
-        return produtos[0];
-    } catch (error) {
-        console.error('Erro ao buscar produto:', error);
-    }
-}
-
-// Função para Abrir Modal de Edição de Produto
+// Abrir modal de edição de produto
 function abrirModalEditarProduto(produto) {
     const modal = document.getElementById('modalEditarProduto');
     const nomeInput = document.getElementById('editarNomeProduto');
     const precoInput = document.getElementById('editarPrecoProduto');
     const descricaoInput = document.getElementById('editarDescricaoProduto');
-    
-    // Preenche os campos com os valores do produto
+
     nomeInput.value = produto.nome;
     precoInput.value = produto.preco;
     descricaoInput.value = produto.descricao;
 
-    // Exibe o modal
     modal.style.display = 'flex';
 
-    // Ao clicar em "Salvar", envia os dados para atualização
+    // Atualizar produto ao clicar no botão "Salvar"
     document.getElementById('btnSalvarEditarProduto').onclick = async () => {
-        const novoNome = nomeInput.value;
-        const novoPreco = precoInput.value;
-        const novaDescricao = descricaoInput.value;
-
-        // Envia os dados modificados para o back-end
         try {
             const res = await fetch(`${apiBaseUrl}/editar-produto/${produto.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    nome: novoNome || produto.nome,
-                    preco: novoPreco || produto.preco,
-                    descricao: novaDescricao || produto.descricao,
+                    nome: nomeInput.value,
+                    preco: precoInput.value,
+                    descricao: descricaoInput.value,
                 }),
             });
-            const data = await res.json();
-            alert(data.message);
-            carregarProdutos();
-            modal.style.display = 'none'; 
+
+            if (res.ok) {
+                alert('Produto atualizado com sucesso!');
+                carregarProdutos();
+                modal.style.display = 'none';
+            } else {
+                const error = await res.json();
+                alert(`Erro ao atualizar produto: ${error.message}`);
+            }
         } catch (error) {
             console.error('Erro ao atualizar produto:', error);
         }
     };
 
-    // Ao clicar em "Fechar", fecha o modal
+    // Fechar o modal
     document.getElementById('btnFecharModalProduto').onclick = () => {
         modal.style.display = 'none';
     };
 }
 
-// Função para Deletar Produto
+// Deletar Produto
 async function deletarProduto(id) {
     if (confirm('Tem certeza que deseja excluir este produto?')) {
         try {
